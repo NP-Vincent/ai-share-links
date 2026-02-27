@@ -348,9 +348,20 @@ final class AI_Share_Links {
         document.addEventListener("DOMContentLoaded", function() {
             var content = document.querySelector(".entry-content, .page-content, main");
             if (content) {
-                var div = document.createElement("div");
-                div.innerHTML = ' . json_encode($buttons) . ';
-                content.appendChild(div.firstChild);
+                var buttonMarkup = ' . json_encode($buttons) . ';
+                var parser = new DOMParser();
+                var parsedDocument = parser.parseFromString(buttonMarkup, "text/html");
+
+                if (!parsedDocument || !parsedDocument.body || parsedDocument.body.children.length !== 1) {
+                    return;
+                }
+
+                var buttonContainer = parsedDocument.body.firstElementChild;
+                if (!buttonContainer || !buttonContainer.classList.contains("ai-share-container")) {
+                    return;
+                }
+
+                content.appendChild(buttonContainer);
             }
         });
         </script>';
