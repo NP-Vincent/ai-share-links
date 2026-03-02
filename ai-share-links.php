@@ -332,12 +332,14 @@ final class AI_Share_Links {
         if (!is_page() || is_admin() || $this->is_builder_preview()) return;
 
         $options = $this->get_options();
+        $position = $options['position'] ?? 'top';
         $page_slugs = trim($options['page_slugs']);
         if (empty($page_slugs)) return;
 
         $current_slug = get_post_field('post_name', get_the_ID());
+        $current_page_uri = get_page_uri(get_the_ID());
         $allowed_slugs = array_filter(array_map('trim', explode(',', $page_slugs)));
-        if (!in_array($current_slug, $allowed_slugs)) return;
+        if (!in_array($current_slug, $allowed_slugs, true) && !in_array($current_page_uri, $allowed_slugs, true)) return;
 
         $buttons = $this->generate_share_buttons($options);
         if (empty($buttons)) return;
@@ -359,7 +361,17 @@ final class AI_Share_Links {
                     return;
                 }
 
-                content.appendChild(buttonContainer);
+                var position = ' . json_encode($position) . ';
+
+                if (position === "top") {
+                    content.prepend(buttonContainer);
+                } else if (position === "bottom") {
+                    content.appendChild(buttonContainer);
+                } else if (position === "both") {
+                    var topButtonContainer = buttonContainer.cloneNode(true);
+                    content.prepend(topButtonContainer);
+                    content.appendChild(buttonContainer);
+                }
             }
         });
         </script>';
