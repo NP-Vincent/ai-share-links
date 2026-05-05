@@ -109,13 +109,26 @@ final class AI_Share_Links {
             AI_SHARE_LINKS_VERSION
         );
 
-        // Main JS + GA + 30-second throttle
-        add_action('wp_footer', function() {
-            echo '<script id="ai-share-links-js">' . $this->get_timeout_script() . '</script>';
-        }, 100);
+        wp_enqueue_script(
+            'ai-share-links-frontend',
+            AI_SHARE_LINKS_PLUGIN_URL . 'assets/js/frontend.js',
+            array(),
+            AI_SHARE_LINKS_VERSION,
+            true
+        );
+
+        $options = $this->get_options();
+        wp_add_inline_script(
+            'ai-share-links-frontend',
+            'window.aiShareLinksConfig = ' . wp_json_encode(
+                array(
+                    'gaTracking' => ('1' === $options['ga_tracking']),
+                )
+            ) . ';',
+            'before'
+        );
 
                       // ← FIXED: Compatibility mode – moves ONLY the FIRST bar to the top
-        $options = $this->get_options();
         if ('1' === $options['compatibility_mode']) {
             add_action('wp_footer', function () {
                 ?>
@@ -501,15 +514,6 @@ final class AI_Share_Links {
         return (defined('REST_REQUEST') && REST_REQUEST) || 
                (isset($_GET['elementor-preview']) || isset($_GET['fl_builder']));
     }
-
-
-
-    private function get_timeout_script() {
-        $options = $this->get_options();
-        $ga = ('1' === $options['ga_tracking']) ? 'true' : 'false';
-        return "document.addEventListener('DOMContentLoaded',function(){var providerConfig={perplexity:{base:'https://www.perplexity.ai/search',param:'q'},chatgpt:{base:'https://chat.openai.com/',param:'q'},claude:{base:'https://claude.ai/new',param:'prompt'},gemini:{base:'https://gemini.google.com/app',param:'prompt'},deepseek:{base:'https://chat.deepseek.com/',param:'q'}};var getCanonicalUrl=function(){var canonical=document.querySelector('link[rel=\"canonical\"]');return canonical&&canonical.href?canonical.href:window.location.href;};var applyTemplate=function(template,context){return (template||'').replace(/\\{URL\\}/g,context.url).replace(/\\{SITE\\}/g,context.site).replace(/\\{TITLE\\}/g,context.title);};var buildProviderUrl=function(platform,prompt){if(!providerConfig[platform]||!prompt){return null;}var config=providerConfig[platform];return config.base+'?'+config.param+'='+encodeURIComponent(prompt);};var setInlineStatus=function(button,message,isError){if(!button){return;}var statusEl=button.querySelector('.ai-share-inline-status');if(!statusEl){statusEl=document.createElement('span');statusEl.className='ai-share-inline-status';statusEl.setAttribute('aria-live','polite');statusEl.style.display='block';statusEl.style.fontSize='12px';statusEl.style.marginTop='4px';button.appendChild(statusEl);}statusEl.textContent=message;statusEl.style.color=isError?'#b91c1c':'inherit';window.setTimeout(function(){if(statusEl&&statusEl.parentNode===button){statusEl.textContent='';}},3000);};var copyPromptFallback=function(prompt,platform,button){var fallbackMessage='Prompt copied — Paste into your AI assistant';var fallbackError='Could not copy prompt — Please copy manually';var trackFallback=function(){if($ga&&typeof gtag!=='undefined'){gtag('event','ai_share_fallback_copy',{ai_platform:platform,page_url:window.location.href});}};if(!prompt){setInlineStatus(button,fallbackError,true);return;}if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(prompt).then(function(){trackFallback();setInlineStatus(button,fallbackMessage,false);}).catch(function(){var textarea=document.createElement('textarea');textarea.value=prompt;textarea.setAttribute('readonly','readonly');textarea.style.position='fixed';textarea.style.opacity='0';textarea.style.pointerEvents='none';document.body.appendChild(textarea);textarea.focus();textarea.select();try{var copied=document.execCommand('copy');if(copied){trackFallback();setInlineStatus(button,fallbackMessage,false);}else{setInlineStatus(button,fallbackError,true);}}catch(err){setInlineStatus(button,fallbackError,true);}document.body.removeChild(textarea);});return;}var legacyTextarea=document.createElement('textarea');legacyTextarea.value=prompt;legacyTextarea.setAttribute('readonly','readonly');legacyTextarea.style.position='fixed';legacyTextarea.style.opacity='0';legacyTextarea.style.pointerEvents='none';document.body.appendChild(legacyTextarea);legacyTextarea.focus();legacyTextarea.select();try{var legacyCopied=document.execCommand('copy');if(legacyCopied){trackFallback();setInlineStatus(button,fallbackMessage,false);}else{setInlineStatus(button,fallbackError,true);}}catch(error){setInlineStatus(button,fallbackError,true);}document.body.removeChild(legacyTextarea);};document.querySelectorAll('.ai-share-btn').forEach(function(btn){btn.addEventListener('click',function(e){var clickedBtn=this;var aiPlatform=this.dataset.ai;e.preventDefault();var template=this.dataset.template||'';var pageTitle=this.dataset.title||document.title||'';var siteName=this.dataset.site||window.location.hostname||'';var pageUrl=this.dataset.url||getCanonicalUrl();var prompt=applyTemplate(template,{url:pageUrl,site:siteName,title:pageTitle});var fingerprintSource=(aiPlatform||'')+'|'+(prompt||'');var promptFingerprint='';try{promptFingerprint=btoa(unescape(encodeURIComponent(fingerprintSource))).replace(/[^a-zA-Z0-9]/g,'').slice(0,24);}catch(fingerprintError){promptFingerprint=encodeURIComponent(fingerprintSource).replace(/[^a-zA-Z0-9]/g,'').slice(0,24);}if(!promptFingerprint){promptFingerprint='default';}var currentTime=Date.now();var lastClickKey='ai_share_last_click_'+promptFingerprint;var lastClickTime=localStorage.getItem(lastClickKey);if(lastClickTime&&(currentTime-parseInt(lastClickTime,10))<30000){var remainingTime=Math.ceil((30000-(currentTime-parseInt(lastClickTime,10)))/1000);var originalText=clickedBtn.querySelector('span:last-child').textContent;clickedBtn.style.opacity='0.5';clickedBtn.style.pointerEvents='none';clickedBtn.style.cursor='not-allowed';clickedBtn.querySelector('span:last-child').textContent='Wait '+remainingTime+'s';var countdown=setInterval(function(){var newRemainingTime=Math.ceil((30000-(Date.now()-parseInt(lastClickTime,10)))/1000);if(newRemainingTime<=0){clearInterval(countdown);clickedBtn.style.opacity='1';clickedBtn.style.pointerEvents='auto';clickedBtn.style.cursor='pointer';clickedBtn.querySelector('span:last-child').textContent=originalText;}else{clickedBtn.querySelector('span:last-child').textContent='Wait '+newRemainingTime+'s';}},1000);return false;}localStorage.setItem(lastClickKey,currentTime.toString());var runtimeUrl=buildProviderUrl(aiPlatform,prompt);if(runtimeUrl){try{var openedWindow=window.open(runtimeUrl,'_blank','noopener,noreferrer');if(!openedWindow){copyPromptFallback(prompt,aiPlatform,clickedBtn);}}catch(openError){copyPromptFallback(prompt,aiPlatform,clickedBtn);}}else{copyPromptFallback(prompt,aiPlatform,clickedBtn);}if($ga&&typeof gtag!=='undefined'){gtag('event','ai_share_click',{ai_platform:aiPlatform,page_url:window.location.href});}});});});";
-    }
-
     private function get_admin_css() {
         return '.scheme-preview-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}.scheme-preview-card-mini{border-radius:6px;overflow:hidden;width:auto;box-shadow:0 2px 6px rgba(0,0,0,0.1)}.scheme-preview-mini{padding:15px;color:white;text-shadow:0 1px 2px rgba(0,0,0,0.5);text-align:center}.scheme-name-mini{font-weight:bold;font-size:11px}.scheme-blue{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}.scheme-salmon{background:linear-gradient(135deg,#ff9a8b 0%,#fecfef 100%)}.scheme-forest{background:linear-gradient(135deg,#134e5e 0%,#71b280 100%)}.scheme-seafoam{background:linear-gradient(135deg,#a8edea 0%,#fed6e3 100%);color:#333;text-shadow:none}.scheme-seafoam .scheme-name-mini{color:#333}.scheme-cosmic{background:linear-gradient(135deg,#8B4513 0%,#9b59b6 50%,#FFD700 100%)}.scheme-brand{background:linear-gradient(135deg,#011949 0%,#0a4fa6 100%)}.scheme-brand-transparent{background:transparent;border:2px solid #011949;color:#011949;text-shadow:none}.scheme-brand-transparent .scheme-name-mini{color:#011949}.scheme-solid-navy{background:#011949}.scheme-midnight-aurora{background:linear-gradient(135deg,#011949 0%,#00d4ff 100%)}';
     }
