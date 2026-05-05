@@ -74,21 +74,23 @@ class AI_Share_Links_Frontend_Renderer {
         }
 
         $post_url = esc_url(get_permalink());
-        $encoded_url = urlencode($post_url);
         $page_title = get_the_title();
         $site_name = esc_attr(get_bloginfo('name'));
-        $ai_platforms = $this->get_ai_platforms($encoded_url, $site_name);
+        $provider_map = $this->get_provider_map();
 
         $output = sprintf('<div class="%s" role="complementary" aria-label="%s">', esc_attr('ai-share-container'), esc_attr__('AI sharing options', AI_SHARE_LINKS_TEXT_DOMAIN));
         $output .= sprintf('<h4 class="ai-share-title">%s</h4>', esc_html($options['description']));
         $output .= '<div class="ai-share-buttons">';
 
         foreach ($options['enabled_ais'] as $ai_key) {
-            if (!isset($ai_platforms[$ai_key])) {
+            if (!isset($provider_map[$ai_key])) {
                 continue;
             }
-            $ai = $ai_platforms[$ai_key];
-            $button_text = ('1' === $options['uppercase']) ? strtoupper($ai['name']) : $ai['name'];
+            $ai = $provider_map[$ai_key];
+            if (empty($ai['enabled'])) {
+                continue;
+            }
+            $button_text = ('1' === $options['uppercase']) ? strtoupper($ai['label']) : $ai['label'];
             $icon = '';
             if ('emojis' === $options['icon_type']) {
                 $icon = sprintf('<span class="ai-icon" aria-hidden="true">%s</span>', $ai['icon']);
@@ -100,7 +102,9 @@ class AI_Share_Links_Frontend_Renderer {
                 ? sprintf(' onclick="if(typeof gtag!==\'undefined\'){gtag(\'event\',\'ai_share_click\',{\'ai_platform\':\'%s\',\'page_url\':window.location.href});}"', esc_js($ai_key))
                 : '';
 
-            $output .= sprintf('<a href="%s" target="_blank" rel="noopener noreferrer" class="ai-share-btn" data-ai="%s" data-template="%s" data-site="%s" data-url="%s" data-title="%s"%s>%s<span>%s</span></a>', esc_url($ai['url']), esc_attr($ai_key), esc_attr($options['ai_prompt']), esc_attr($site_name), esc_attr($post_url), esc_attr($page_title), $onclick, $icon, esc_html($button_text));
+            $fallback_url = $this->build_provider_url($ai, $options['ai_prompt'], $post_url, $site_name, $page_title);
+
+            $output .= sprintf('<a href="%s" target="_blank" rel="noopener noreferrer" class="ai-share-btn" data-ai="%s" data-template="%s" data-site="%s" data-url="%s" data-title="%s" data-base-url="%s" data-param-key="%s" data-supports-prefill="%s"%s>%s<span>%s</span></a>', esc_url($fallback_url), esc_attr($ai['id']), esc_attr($options['ai_prompt']), esc_attr($site_name), esc_attr($post_url), esc_attr($page_title), esc_url($ai['base_url']), esc_attr($ai['param_key']), $ai['supports_prefill'] ? '1' : '0', $onclick, $icon, esc_html($button_text));
         }
 
         $output .= '</div></div>';
@@ -108,16 +112,31 @@ class AI_Share_Links_Frontend_Renderer {
         return $output;
     }
 
-    private function get_ai_platforms($encoded_url, $site_name) {
-        $prompt = call_user_func($this->get_options)['ai_prompt'];
-        $prompt = str_replace(array('{URL}', '{SITE}'), array($encoded_url, $site_name), $prompt);
-
+    public function get_provider_map() {
         return array(
-            'perplexity' => array('name' => 'Perplexity', 'icon' => 'P', 'url' => 'https://www.perplexity.ai/search?q=' . urlencode($prompt)),
-            'chatgpt' => array('name' => 'ChatGPT', 'icon' => 'C', 'url' => 'https://chat.openai.com/?q=' . urlencode($prompt)),
-            'claude' => array('name' => 'Claude', 'icon' => 'C', 'url' => 'https://claude.ai/new?prompt=' . urlencode($prompt)),
-            'gemini' => array('name' => 'Gemini', 'icon' => 'G', 'url' => 'https://gemini.google.com/app?prompt=' . urlencode($prompt)),
-            'deepseek' => array('name' => 'DeepSeek', 'icon' => 'D', 'url' => 'https://chat.deepseek.com/?q=' . urlencode($prompt)),
+            'perplexity' => array('id' => 'perplexity', 'label' => 'Perplexity', 'icon' => 'P', 'base_url' => 'https://www.perplexity.ai/search', 'param_key' => 'q', 'supports_prefill' => true, 'enabled' => true),
+            'chatgpt' => array('id' => 'chatgpt', 'label' => 'ChatGPT', 'icon' => 'C', 'base_url' => 'https://chat.openai.com/', 'param_key' => 'q', 'supports_prefill' => true, 'enabled' => true),
+            'claude' => array('id' => 'claude', 'label' => 'Claude', 'icon' => 'C', 'base_url' => 'https://claude.ai/new', 'param_key' => 'prompt', 'supports_prefill' => true, 'enabled' => true),
+            'gemini' => array('id' => 'gemini', 'label' => 'Gemini', 'icon' => 'G', 'base_url' => 'https://gemini.google.com/app', 'param_key' => 'prompt', 'supports_prefill' => true, 'enabled' => true),
+            'deepseek' => array('id' => 'deepseek', 'label' => 'DeepSeek', 'icon' => 'D', 'base_url' => 'https://chat.deepseek.com/', 'param_key' => 'q', 'supports_prefill' => true, 'enabled' => true),
+        );
+    }
+
+    private function build_provider_url($provider, $template, $post_url, $site_name, $page_title) {
+        if (empty($provider['base_url']) || empty($provider['param_key'])) {
+            return $post_url;
+        }
+
+        $prompt = str_replace(
+            array('{URL}', '{SITE}', '{TITLE}'),
+            array($post_url, $site_name, $page_title),
+            $template
+        );
+
+        return add_query_arg(
+            $provider['param_key'],
+            $prompt,
+            $provider['base_url']
         );
     }
 }

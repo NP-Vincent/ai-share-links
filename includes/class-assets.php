@@ -24,7 +24,14 @@ class AI_Share_Links_Assets {
         wp_enqueue_script('ai-share-links-frontend', AI_SHARE_LINKS_PLUGIN_URL . 'assets/js/frontend.js', array(), AI_SHARE_LINKS_VERSION, true);
 
         $options = call_user_func($this->get_options);
-        wp_add_inline_script('ai-share-links-frontend', 'window.aiShareLinksConfig = ' . wp_json_encode(array('gaTracking' => ('1' === $options['ga_tracking']))) . ';', 'before');
+        $renderer = new AI_Share_Links_Frontend_Renderer($this->get_options, static function () {
+            return false;
+        });
+
+        wp_add_inline_script('ai-share-links-frontend', 'window.aiShareLinksConfig = ' . wp_json_encode(array(
+            'gaTracking' => ('1' === $options['ga_tracking']),
+            'providers' => $renderer->get_provider_map(),
+        )) . ';', 'before');
 
         if ('1' === $options['compatibility_mode']) {
             add_action('wp_footer', array($this, 'render_compatibility_script'), 101);
