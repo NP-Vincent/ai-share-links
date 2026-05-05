@@ -34,33 +34,33 @@ class AI_Share_Links_Admin_Settings {
                 <?php settings_fields('ai_share_links_options_group'); ?>
                 <table class="form-table">
                     <tr>
-                        <th scope="row"><?php _e('Position', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
+                        <th scope="row"><?php esc_html_e('Position', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
                         <td>
                             <select name="ai_share_links_options[position]">
-                                <option value="top" <?php selected($options['position'], 'top'); ?>><?php _e('Top only', AI_SHARE_LINKS_TEXT_DOMAIN); ?></option>
-                                <option value="bottom" <?php selected($options['position'], 'bottom'); ?>><?php _e('Bottom only', AI_SHARE_LINKS_TEXT_DOMAIN); ?></option>
-                                <option value="both" <?php selected($options['position'], 'both'); ?>><?php _e('Both', AI_SHARE_LINKS_TEXT_DOMAIN); ?></option>
+                                <option value="top" <?php selected($options['position'], 'top'); ?>><?php esc_html_e('Top only', AI_SHARE_LINKS_TEXT_DOMAIN); ?></option>
+                                <option value="bottom" <?php selected($options['position'], 'bottom'); ?>><?php esc_html_e('Bottom only', AI_SHARE_LINKS_TEXT_DOMAIN); ?></option>
+                                <option value="both" <?php selected($options['position'], 'both'); ?>><?php esc_html_e('Both', AI_SHARE_LINKS_TEXT_DOMAIN); ?></option>
                             </select>
                         </td>
                     </tr>
                     <tr>
-                        <th scope="row"><?php _e('Theme Styling', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
-                        <td><p class="description"><?php _e('AI Share Links now inherits your active theme styles (colors, typography, spacing, and button appearance) automatically.', AI_SHARE_LINKS_TEXT_DOMAIN); ?></p></td>
+                        <th scope="row"><?php esc_html_e('Theme Styling', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
+                        <td><p class="description"><?php esc_html_e('AI Share Links now inherits your active theme styles (colors, typography, spacing, and button appearance) automatically.', AI_SHARE_LINKS_TEXT_DOMAIN); ?></p></td>
                     </tr>
                     <tr>
-                        <th scope="row"><?php _e('Icon Type', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
+                        <th scope="row"><?php esc_html_e('Icon Type', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
                         <td>
                             <select name="ai_share_links_options[icon_type]">
-                                <option value="logos" <?php selected($options['icon_type'], 'logos'); ?>><?php _e('Logos', AI_SHARE_LINKS_TEXT_DOMAIN); ?></option>
-                                <option value="emojis" <?php selected($options['icon_type'], 'emojis'); ?>><?php _e('Emojis', AI_SHARE_LINKS_TEXT_DOMAIN); ?></option>
+                                <option value="logos" <?php selected($options['icon_type'], 'logos'); ?>><?php esc_html_e('Logos', AI_SHARE_LINKS_TEXT_DOMAIN); ?></option>
+                                <option value="emojis" <?php selected($options['icon_type'], 'emojis'); ?>><?php esc_html_e('Emojis', AI_SHARE_LINKS_TEXT_DOMAIN); ?></option>
                             </select>
                         </td>
                     </tr>
-                    <tr><th scope="row"><?php _e('Uppercase Button Text', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th><td><input type="checkbox" name="ai_share_links_options[uppercase]" value="1" <?php checked($options['uppercase'], '1'); ?> /></td></tr>
-                    <tr><th scope="row"><?php _e('Description Text', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th><td><input type="text" name="ai_share_links_options[description]" value="<?php echo esc_attr($options['description']); ?>" class="regular-text" /></td></tr>
-                    <tr><th scope="row"><?php _e('Enable Google Analytics Tracking', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th><td><input type="checkbox" name="ai_share_links_options[ga_tracking]" value="1" <?php checked($options['ga_tracking'], '1'); ?> /></td></tr>
+                    <tr><th scope="row"><?php esc_html_e('Uppercase Button Text', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th><td><input type="checkbox" name="ai_share_links_options[uppercase]" value="1" <?php checked($options['uppercase'], '1'); ?> /></td></tr>
+                    <tr><th scope="row"><?php esc_html_e('Description Text', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th><td><input type="text" name="ai_share_links_options[description]" value="<?php echo esc_attr($options['description']); ?>" class="regular-text" /></td></tr>
+                    <tr><th scope="row"><?php esc_html_e('Enable Google Analytics Tracking', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th><td><input type="checkbox" name="ai_share_links_options[ga_tracking]" value="1" <?php checked($options['ga_tracking'], '1'); ?> /></td></tr>
                     <tr>
-                        <th scope="row"><?php _e('Enabled AI Platforms', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
+                        <th scope="row"><?php esc_html_e('Enabled AI Platforms', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
                         <td>
                             <?php
                             $ais = array('perplexity' => 'Perplexity', 'chatgpt' => 'ChatGPT', 'claude' => 'Claude', 'gemini' => 'Gemini', 'deepseek' => 'DeepSeek');
@@ -69,9 +69,9 @@ class AI_Share_Links_Admin_Settings {
                             <?php endforeach; ?>
                         </td>
                     </tr>
-                    <tr><th scope="row"><?php _e('AI Prompt Template', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th><td><textarea name="ai_share_links_options[ai_prompt]" rows="5" class="large-text code"><?php echo esc_textarea($options['ai_prompt']); ?></textarea><p class="description"><?php _e('Use tokens: {URL}, {SITE}, {TITLE}. Prompt is generated at click time; href links remain as fallback.', AI_SHARE_LINKS_TEXT_DOMAIN); ?></p></td></tr>
-                    <tr><th scope="row"><?php _e('Show on Pages (slugs/paths)', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th><td><textarea name="ai_share_links_options[page_slugs]" rows="6" class="large-text code" placeholder="about,pricing&#10;resources/guides/getting-started"><?php echo esc_textarea($options['page_slugs']); ?></textarea><p class="description"><?php _e('Enter slugs or page paths separated by commas or new lines. Leave empty to disable on pages.', AI_SHARE_LINKS_TEXT_DOMAIN); ?></p></td></tr>
-                    <tr><th scope="row"><label for="ai_share_links_options[compatibility_mode]"><?php _e('Compatibility Mode', AI_SHARE_LINKS_TEXT_DOMAIN); ?></label></th><td><input type="checkbox" id="ai_share_links_options[compatibility_mode]" name="ai_share_links_options[compatibility_mode]" value="1" <?php checked($options['compatibility_mode'], '1'); ?> /><p class="description"><?php _e('Enable this on themes that prepend the featured image AFTER the_content filters (causing overlap). This moves the AI bar to the very top using JavaScript.', AI_SHARE_LINKS_TEXT_DOMAIN); ?></p></td></tr>
+                    <tr><th scope="row"><?php esc_html_e('AI Prompt Template', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th><td><textarea name="ai_share_links_options[ai_prompt]" rows="5" class="large-text code"><?php echo esc_textarea($options['ai_prompt']); ?></textarea><p class="description"><?php esc_html_e('Use tokens: {URL}, {SITE}, {TITLE}. Prompt is generated at click time; href links remain as fallback.', AI_SHARE_LINKS_TEXT_DOMAIN); ?></p></td></tr>
+                    <tr><th scope="row"><?php esc_html_e('Show on Pages (slugs/paths)', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th><td><textarea name="ai_share_links_options[page_slugs]" rows="6" class="large-text code" placeholder="about,pricing&#10;resources/guides/getting-started"><?php echo esc_textarea($options['page_slugs']); ?></textarea><p class="description"><?php esc_html_e('Enter slugs or page paths separated by commas or new lines. Leave empty to disable on pages.', AI_SHARE_LINKS_TEXT_DOMAIN); ?></p></td></tr>
+                    <tr><th scope="row"><label for="ai_share_links_options[compatibility_mode]"><?php esc_html_e('Compatibility Mode', AI_SHARE_LINKS_TEXT_DOMAIN); ?></label></th><td><input type="checkbox" id="ai_share_links_options[compatibility_mode]" name="ai_share_links_options[compatibility_mode]" value="1" <?php checked($options['compatibility_mode'], '1'); ?> /><p class="description"><?php esc_html_e('Enable this on themes that prepend the featured image AFTER the_content filters (causing overlap). This moves the AI bar to the very top using JavaScript.', AI_SHARE_LINKS_TEXT_DOMAIN); ?></p></td></tr>
                 </table>
                 <?php submit_button(); ?>
             </form>
