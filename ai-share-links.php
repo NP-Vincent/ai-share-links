@@ -193,7 +193,7 @@ final class AI_Share_Links {
             : array();
         $sanitized['enabled_ais']  = array_values(array_intersect($enabled_ais, $allowed_enabled_ais));
 
-        $page_slugs = isset($input['page_slugs']) ? sanitize_text_field($input['page_slugs']) : '';
+        $page_slugs = isset($input['page_slugs']) ? sanitize_textarea_field($input['page_slugs']) : '';
         $sanitized['page_slugs']   = $truncate($page_slugs, 1000);
         $sanitized['compatibility_mode'] = isset($input['compatibility_mode']) ? '1' : '0'; // ← NEW
         return $sanitized;
@@ -290,10 +290,18 @@ final class AI_Share_Links {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php _e('Show on Pages (comma-separated slugs)', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
+                        <th scope="row"><?php _e('AI Prompt Template', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
                         <td>
-                            <input type="text" name="ai_share_links_options[page_slugs]" value="<?php echo esc_attr($options['page_slugs']); ?>" class="regular-text" />
-                            <p class="description"><?php _e('Leave empty to disable on pages.', AI_SHARE_LINKS_TEXT_DOMAIN); ?></p>
+                            <textarea name="ai_share_links_options[ai_prompt]" rows="5" class="large-text code"><?php echo esc_textarea($options['ai_prompt']); ?></textarea>
+                            <p class="description"><?php _e('Use tokens: {URL}, {SITE}, {TITLE}. Prompt is generated at click time; href links remain as fallback.', AI_SHARE_LINKS_TEXT_DOMAIN); ?></p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row"><?php _e('Show on Pages (slugs/paths)', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
+                        <td>
+                            <textarea name="ai_share_links_options[page_slugs]" rows="6" class="large-text code" placeholder="about,pricing&#10;resources/guides/getting-started"><?php echo esc_textarea($options['page_slugs']); ?></textarea>
+                            <p class="description"><?php _e('Enter slugs or page paths separated by commas or new lines. Leave empty to disable on pages.', AI_SHARE_LINKS_TEXT_DOMAIN); ?></p>
                         </td>
                     </tr>
 
@@ -344,7 +352,8 @@ final class AI_Share_Links {
 
         $current_slug = get_post_field('post_name', get_the_ID());
         $current_page_uri = get_page_uri(get_the_ID());
-        $allowed_slugs = array_filter(array_map('trim', explode(',', $page_slugs)));
+        $allowed_slugs = preg_split('/[\r\n,]+/', $page_slugs);
+        $allowed_slugs = array_filter(array_map('trim', $allowed_slugs));
         if (!in_array($current_slug, $allowed_slugs, true) && !in_array($current_page_uri, $allowed_slugs, true)) return;
 
         $buttons = $this->generate_share_buttons($options);
