@@ -388,6 +388,7 @@ final class AI_Share_Links {
 
         $post_url     = esc_url(get_permalink());
         $encoded_url  = urlencode($post_url);
+        $page_title   = get_the_title();
         $site_name    = esc_attr(get_bloginfo('name'));
         $ai_platforms = $this->get_ai_platforms($encoded_url, $site_name);
 
@@ -417,9 +418,13 @@ final class AI_Share_Links {
                 : '';
 
             $output .= sprintf(
-                '<a href="%s" target="_blank" rel="noopener noreferrer" class="ai-share-btn" data-ai="%s"%s>%s<span>%s</span></a>',
+                '<a href="%s" target="_blank" rel="noopener noreferrer" class="ai-share-btn" data-ai="%s" data-template="%s" data-site="%s" data-url="%s" data-title="%s"%s>%s<span>%s</span></a>',
                 esc_url($ai['url']),
                 esc_attr($ai_key),
+                esc_attr($options['ai_prompt']),
+                esc_attr($site_name),
+                esc_attr($post_url),
+                esc_attr($page_title),
                 $onclick,
                 $icon,
                 esc_html($button_text)
@@ -481,7 +486,7 @@ final class AI_Share_Links {
     private function get_timeout_script() {
         $options = $this->get_options();
         $ga = ('1' === $options['ga_tracking']) ? 'true' : 'false';
-        return "document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.ai-share-btn').forEach(function(btn){btn.addEventListener('click',function(e){var clickedBtn=this;var aiPlatform=this.dataset.ai;var currentTime=Date.now();var lastClickKey='ai_share_last_click_'+aiPlatform;var lastClickTime=localStorage.getItem(lastClickKey);if(lastClickTime&&(currentTime-parseInt(lastClickTime))<30000){e.preventDefault();var remainingTime=Math.ceil((30000-(currentTime-parseInt(lastClickTime)))/1000);var originalText=clickedBtn.querySelector('span:last-child').textContent;clickedBtn.style.opacity='0.5';clickedBtn.style.pointerEvents='none';clickedBtn.style.cursor='not-allowed';clickedBtn.querySelector('span:last-child').textContent='Wait '+remainingTime+'s';var countdown=setInterval(function(){var newRemainingTime=Math.ceil((30000-(Date.now()-parseInt(lastClickTime)))/1000);if(newRemainingTime<=0){clearInterval(countdown);clickedBtn.style.opacity='1';clickedBtn.style.pointerEvents='auto';clickedBtn.style.cursor='pointer';clickedBtn.querySelector('span:last-child').textContent=originalText;}else{clickedBtn.querySelector('span:last-child').textContent='Wait '+newRemainingTime+'s';}},1000);return false;}localStorage.setItem(lastClickKey,currentTime.toString());if($ga&&typeof gtag!=='undefined'){gtag('event','ai_share_click',{ai_platform:aiPlatform,page_url:window.location.href});}});});});";
+        return "document.addEventListener('DOMContentLoaded',function(){var providerConfig={perplexity:{base:'https://www.perplexity.ai/search',param:'q'},chatgpt:{base:'https://chat.openai.com/',param:'q'},claude:{base:'https://claude.ai/new',param:'prompt'}};var getCanonicalUrl=function(){var canonical=document.querySelector('link[rel=\"canonical\"]');return canonical&&canonical.href?canonical.href:window.location.href;};var applyTemplate=function(template,context){return (template||'').replace(/\\{URL\\}/g,context.url).replace(/\\{SITE\\}/g,context.site).replace(/\\{TITLE\\}/g,context.title);};var buildProviderUrl=function(platform,prompt){if(!providerConfig[platform]||!prompt){return null;}var config=providerConfig[platform];return config.base+'?'+config.param+'='+encodeURIComponent(prompt);};document.querySelectorAll('.ai-share-btn').forEach(function(btn){btn.addEventListener('click',function(e){var clickedBtn=this;var aiPlatform=this.dataset.ai;var currentTime=Date.now();var lastClickKey='ai_share_last_click_'+aiPlatform;var lastClickTime=localStorage.getItem(lastClickKey);if(lastClickTime&&(currentTime-parseInt(lastClickTime,10))<30000){e.preventDefault();var remainingTime=Math.ceil((30000-(currentTime-parseInt(lastClickTime,10)))/1000);var originalText=clickedBtn.querySelector('span:last-child').textContent;clickedBtn.style.opacity='0.5';clickedBtn.style.pointerEvents='none';clickedBtn.style.cursor='not-allowed';clickedBtn.querySelector('span:last-child').textContent='Wait '+remainingTime+'s';var countdown=setInterval(function(){var newRemainingTime=Math.ceil((30000-(Date.now()-parseInt(lastClickTime,10)))/1000);if(newRemainingTime<=0){clearInterval(countdown);clickedBtn.style.opacity='1';clickedBtn.style.pointerEvents='auto';clickedBtn.style.cursor='pointer';clickedBtn.querySelector('span:last-child').textContent=originalText;}else{clickedBtn.querySelector('span:last-child').textContent='Wait '+newRemainingTime+'s';}},1000);return false;}localStorage.setItem(lastClickKey,currentTime.toString());var template=this.dataset.template||'';var pageTitle=this.dataset.title||document.title||'';var siteName=this.dataset.site||window.location.hostname||'';var pageUrl=this.dataset.url||getCanonicalUrl();var prompt=applyTemplate(template,{url:pageUrl,site:siteName,title:pageTitle});var runtimeUrl=buildProviderUrl(aiPlatform,prompt);if(runtimeUrl){e.preventDefault();window.open(runtimeUrl,'_blank','noopener,noreferrer');}if($ga&&typeof gtag!=='undefined'){gtag('event','ai_share_click',{ai_platform:aiPlatform,page_url:window.location.href});}});});});";
     }
 
     private function get_admin_css() {
