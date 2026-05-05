@@ -193,7 +193,7 @@ final class AI_Share_Links {
             : array();
         $sanitized['enabled_ais']  = array_values(array_intersect($enabled_ais, $allowed_enabled_ais));
 
-        $page_slugs = isset($input['page_slugs']) ? sanitize_text_field($input['page_slugs']) : '';
+        $page_slugs = isset($input['page_slugs']) ? sanitize_textarea_field($input['page_slugs']) : '';
         $sanitized['page_slugs']   = $truncate($page_slugs, 1000);
         $sanitized['compatibility_mode'] = isset($input['compatibility_mode']) ? '1' : '0'; // ← NEW
         return $sanitized;
@@ -290,10 +290,18 @@ final class AI_Share_Links {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php _e('Show on Pages (comma-separated slugs)', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
+                        <th scope="row"><?php _e('AI Prompt Template', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
                         <td>
-                            <input type="text" name="ai_share_links_options[page_slugs]" value="<?php echo esc_attr($options['page_slugs']); ?>" class="regular-text" />
-                            <p class="description"><?php _e('Leave empty to disable on pages.', AI_SHARE_LINKS_TEXT_DOMAIN); ?></p>
+                            <textarea name="ai_share_links_options[ai_prompt]" rows="5" class="large-text code"><?php echo esc_textarea($options['ai_prompt']); ?></textarea>
+                            <p class="description"><?php _e('Use tokens: {URL}, {SITE}, {TITLE}. Prompt is generated at click time; href links remain as fallback.', AI_SHARE_LINKS_TEXT_DOMAIN); ?></p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row"><?php _e('Show on Pages (slugs/paths)', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
+                        <td>
+                            <textarea name="ai_share_links_options[page_slugs]" rows="6" class="large-text code" placeholder="about,pricing&#10;resources/guides/getting-started"><?php echo esc_textarea($options['page_slugs']); ?></textarea>
+                            <p class="description"><?php _e('Enter slugs or page paths separated by commas or new lines. Leave empty to disable on pages.', AI_SHARE_LINKS_TEXT_DOMAIN); ?></p>
                         </td>
                     </tr>
 
@@ -344,7 +352,8 @@ final class AI_Share_Links {
 
         $current_slug = get_post_field('post_name', get_the_ID());
         $current_page_uri = get_page_uri(get_the_ID());
-        $allowed_slugs = array_filter(array_map('trim', explode(',', $page_slugs)));
+        $allowed_slugs = preg_split('/[\r\n,]+/', $page_slugs);
+        $allowed_slugs = array_filter(array_map('trim', $allowed_slugs));
         if (!in_array($current_slug, $allowed_slugs, true) && !in_array($current_page_uri, $allowed_slugs, true)) return;
 
         $buttons = $this->generate_share_buttons($options);
@@ -388,6 +397,7 @@ final class AI_Share_Links {
 
         $post_url     = esc_url(get_permalink());
         $encoded_url  = urlencode($post_url);
+        $page_title   = get_the_title();
         $site_name    = esc_attr(get_bloginfo('name'));
         $ai_platforms = $this->get_ai_platforms($encoded_url, $site_name);
 
@@ -417,9 +427,13 @@ final class AI_Share_Links {
                 : '';
 
             $output .= sprintf(
-                '<a href="%s" target="_blank" rel="noopener noreferrer" class="ai-share-btn" data-ai="%s"%s>%s<span>%s</span></a>',
+                '<a href="%s" target="_blank" rel="noopener noreferrer" class="ai-share-btn" data-ai="%s" data-template="%s" data-site="%s" data-url="%s" data-title="%s"%s>%s<span>%s</span></a>',
                 esc_url($ai['url']),
                 esc_attr($ai_key),
+                esc_attr($options['ai_prompt']),
+                esc_attr($site_name),
+                esc_attr($post_url),
+                esc_attr($page_title),
                 $onclick,
                 $icon,
                 esc_html($button_text)
@@ -481,7 +495,7 @@ final class AI_Share_Links {
     private function get_timeout_script() {
         $options = $this->get_options();
         $ga = ('1' === $options['ga_tracking']) ? 'true' : 'false';
-        return "document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.ai-share-btn').forEach(function(btn){btn.addEventListener('click',function(e){var clickedBtn=this;var aiPlatform=this.dataset.ai;var currentTime=Date.now();var lastClickKey='ai_share_last_click_'+aiPlatform;var lastClickTime=localStorage.getItem(lastClickKey);if(lastClickTime&&(currentTime-parseInt(lastClickTime))<30000){e.preventDefault();var remainingTime=Math.ceil((30000-(currentTime-parseInt(lastClickTime)))/1000);var originalText=clickedBtn.querySelector('span:last-child').textContent;clickedBtn.style.opacity='0.5';clickedBtn.style.pointerEvents='none';clickedBtn.style.cursor='not-allowed';clickedBtn.querySelector('span:last-child').textContent='Wait '+remainingTime+'s';var countdown=setInterval(function(){var newRemainingTime=Math.ceil((30000-(Date.now()-parseInt(lastClickTime)))/1000);if(newRemainingTime<=0){clearInterval(countdown);clickedBtn.style.opacity='1';clickedBtn.style.pointerEvents='auto';clickedBtn.style.cursor='pointer';clickedBtn.querySelector('span:last-child').textContent=originalText;}else{clickedBtn.querySelector('span:last-child').textContent='Wait '+newRemainingTime+'s';}},1000);return false;}localStorage.setItem(lastClickKey,currentTime.toString());if($ga&&typeof gtag!=='undefined'){gtag('event','ai_share_click',{ai_platform:aiPlatform,page_url:window.location.href});}});});});";
+        return "document.addEventListener('DOMContentLoaded',function(){var providerConfig={perplexity:{base:'https://www.perplexity.ai/search',param:'q'},chatgpt:{base:'https://chat.openai.com/',param:'q'},claude:{base:'https://claude.ai/new',param:'prompt'}};var getCanonicalUrl=function(){var canonical=document.querySelector('link[rel=\"canonical\"]');return canonical&&canonical.href?canonical.href:window.location.href;};var applyTemplate=function(template,context){return (template||'').replace(/\\{URL\\}/g,context.url).replace(/\\{SITE\\}/g,context.site).replace(/\\{TITLE\\}/g,context.title);};var buildProviderUrl=function(platform,prompt){if(!providerConfig[platform]||!prompt){return null;}var config=providerConfig[platform];return config.base+'?'+config.param+'='+encodeURIComponent(prompt);};document.querySelectorAll('.ai-share-btn').forEach(function(btn){btn.addEventListener('click',function(e){var clickedBtn=this;var aiPlatform=this.dataset.ai;var currentTime=Date.now();var lastClickKey='ai_share_last_click_'+aiPlatform;var lastClickTime=localStorage.getItem(lastClickKey);if(lastClickTime&&(currentTime-parseInt(lastClickTime,10))<30000){e.preventDefault();var remainingTime=Math.ceil((30000-(currentTime-parseInt(lastClickTime,10)))/1000);var originalText=clickedBtn.querySelector('span:last-child').textContent;clickedBtn.style.opacity='0.5';clickedBtn.style.pointerEvents='none';clickedBtn.style.cursor='not-allowed';clickedBtn.querySelector('span:last-child').textContent='Wait '+remainingTime+'s';var countdown=setInterval(function(){var newRemainingTime=Math.ceil((30000-(Date.now()-parseInt(lastClickTime,10)))/1000);if(newRemainingTime<=0){clearInterval(countdown);clickedBtn.style.opacity='1';clickedBtn.style.pointerEvents='auto';clickedBtn.style.cursor='pointer';clickedBtn.querySelector('span:last-child').textContent=originalText;}else{clickedBtn.querySelector('span:last-child').textContent='Wait '+newRemainingTime+'s';}},1000);return false;}localStorage.setItem(lastClickKey,currentTime.toString());var template=this.dataset.template||'';var pageTitle=this.dataset.title||document.title||'';var siteName=this.dataset.site||window.location.hostname||'';var pageUrl=this.dataset.url||getCanonicalUrl();var prompt=applyTemplate(template,{url:pageUrl,site:siteName,title:pageTitle});var runtimeUrl=buildProviderUrl(aiPlatform,prompt);if(runtimeUrl){e.preventDefault();window.open(runtimeUrl,'_blank','noopener,noreferrer');}if($ga&&typeof gtag!=='undefined'){gtag('event','ai_share_click',{ai_platform:aiPlatform,page_url:window.location.href});}});});});";
     }
 
     private function get_admin_css() {
