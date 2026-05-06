@@ -22,7 +22,7 @@ AI Share Links helps readers open your content in popular AI tools with one clic
 - **Compatibility Mode**: Optional JavaScript placement fix for themes that inject featured images after `the_content`
 
 ### Prompting & Analytics
-- **Prompt Tokens**: Use `{URL}`, `{SITE}`, `{TITLE}`, `{TYPE}`, `{POST_TYPE}`, `{CATEGORY}`, `{TAGS}`, and `{EXCERPT}`
+- **Prompt Tokens**: Use `{URL}`, `{SITE}`, `{TITLE}`, `{TYPE}`, `{POST_TYPE}`, `{CATEGORY}`, `{TAGS}`, `{EXCERPT}`, `{SCHEMA_TYPE}`, `{AUTHOR}`, `{PUBLISHED_DATE}`, and `{FAQ_COUNT}`
 - **Runtime Prompt Generation**: Prompt values are generated at click time while keeping href fallback behavior; empty tokens resolve to blank values
 - **Google Analytics Integration**: Optional click tracking
 
@@ -54,6 +54,10 @@ Use tokens in your prompt:
 - `{CATEGORY}` – comma-separated category names (empty when not available)
 - `{TAGS}` – comma-separated tag names (empty when not available)
 - `{EXCERPT}` – post excerpt, or an auto-generated excerpt from content when no manual excerpt exists
+- `{SCHEMA_TYPE}` – inferred schema/content type from SEO plugin metadata when available, with WordPress post type fallback
+- `{AUTHOR}` – post author display name
+- `{PUBLISHED_DATE}` – publish date in `YYYY-MM-DD` format
+- `{FAQ_COUNT}` – inferred FAQ item count from supported plugin metadata/content markers
 
 Token values are replaced at click time in JavaScript and in fallback href links rendered by PHP. If a token is unavailable for the current post/page context, it is replaced with an empty string.
 
