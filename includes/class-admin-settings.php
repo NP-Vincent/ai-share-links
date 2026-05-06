@@ -27,10 +27,6 @@ class AI_Share_Links_Admin_Settings {
 
     public function settings_page() {
         $options = call_user_func($this->get_options);
-        $renderer = new AI_Share_Links_Frontend_Renderer($this->get_options, static function () {
-            return false;
-        });
-        $provider_map = $renderer->get_provider_map();
         ?>
         <div class="wrap">
             <h1><?php esc_html_e('AI Share Links Settings', AI_SHARE_LINKS_TEXT_DOMAIN); ?></h1>
@@ -67,13 +63,9 @@ class AI_Share_Links_Admin_Settings {
                         <th scope="row"><?php esc_html_e('Enabled AI Platforms', AI_SHARE_LINKS_TEXT_DOMAIN); ?></th>
                         <td>
                             <?php
-                            foreach ($provider_map as $key => $provider):
-                                $name = isset($provider['label']) ? $provider['label'] : $key;
-                                $mode_label = isset($provider['recommended_mode']) ? $provider['recommended_mode'] : 'auto';
-                                $mode_description = isset($provider['mode_description']) ? $provider['mode_description'] : '';
-                                ?>
-                                <label><input type="checkbox" name="ai_share_links_options[enabled_ais][]" value="<?php echo esc_attr($key); ?>" <?php checked(in_array($key, $options['enabled_ais'], true)); ?> /> <?php echo esc_html($name); ?></label>
-                                <p class="description" style="margin:4px 0 10px 22px;"><?php echo esc_html(sprintf(__('Mode: %1$s. %2$s', AI_SHARE_LINKS_TEXT_DOMAIN), $mode_label, $mode_description)); ?></p>
+                            $ais = array('perplexity' => 'Perplexity', 'chatgpt' => 'ChatGPT', 'claude' => 'Claude', 'gemini' => 'Gemini', 'deepseek' => 'DeepSeek');
+                            foreach ($ais as $key => $name): ?>
+                                <label><input type="checkbox" name="ai_share_links_options[enabled_ais][]" value="<?php echo esc_attr($key); ?>" <?php checked(in_array($key, $options['enabled_ais'])); ?> /> <?php echo esc_html($name); ?></label><br>
                             <?php endforeach; ?>
                         </td>
                     </tr>
