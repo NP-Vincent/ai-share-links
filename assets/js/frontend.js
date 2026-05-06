@@ -30,7 +30,7 @@
         return config.base_url + '?' + encodeURIComponent(config.param_key) + '=' + encodeURIComponent(prompt);
     }
 
-    var STATUS_MESSAGES = { copied_and_opened: { message: 'Opened with prefilled prompt.' , isError: false }, copied_opened_no_prefill: { message: 'Prompt copied and provider opened. Paste into chat to continue.', isError: false }, copied_only: { message: 'Copied prompt — paste it in chat to continue.', isError: false }, popup_blocked_copied: { message: 'Popup blocked — prompt copied. Allow popups to open provider automatically.', isError: false }, prefill_unstable_copied: { message: 'Prefill is not reliable for this provider right now — prompt copied for manual paste.', isError: false }, copy_failed: { message: 'Unable to copy automatically — copy the prompt manually and paste into chat.', isError: true } };
+    var STATUS_MESSAGES = { copied_and_opened: { message: 'Opened with prefilled prompt.', isError: false }, copied_only: { message: 'Copied prompt — paste it in chat to continue.', isError: false }, popup_blocked_copied: { message: 'Popup blocked — prompt copied. Allow popups to open provider automatically.', isError: false }, prefill_unstable_copied: { message: 'Prefill is not reliable for this provider right now — prompt copied for manual paste.', isError: false }, copy_failed: { message: 'Unable to copy automatically — copy the prompt manually and paste into chat.', isError: true } };
     function setInlineStatus(button, message, isError) { if (!button) return; var statusEl = button.querySelector('.ai-share-inline-status'); if (!statusEl) { statusEl = document.createElement('span'); statusEl.className = 'ai-share-inline-status'; statusEl.setAttribute('aria-live', 'polite'); statusEl.style.display = 'block'; statusEl.style.fontSize = '12px'; statusEl.style.marginTop = '4px'; button.appendChild(statusEl);} statusEl.textContent = message; statusEl.style.color = isError ? '#b91c1c' : 'inherit'; window.setTimeout(function () { if (statusEl && statusEl.parentNode === button) { statusEl.textContent = ''; } }, 3000); }
     function showInlineStatus(button, outcome) { var details = STATUS_MESSAGES[outcome] || STATUS_MESSAGES.copy_failed; setInlineStatus(button, details.message, details.isError); }
     function emitAnalytics(eventName, payload) { if (!CONFIG.gaTracking || typeof gtag === 'undefined') return; gtag('event', eventName, payload); }
@@ -64,19 +64,6 @@
 
         if (selectedMode === 'copy_only') {
             var copyOutcome = provider.supports_prefill ? 'prefill_unstable_copied' : 'copied_only';
-            var providerHomeUrl = provider.base_url || button.getAttribute('href') || null;
-            if (providerHomeUrl) {
-                try {
-                    var openedProviderWindow = window.open(providerHomeUrl, '_blank', 'noopener,noreferrer');
-                    if (openedProviderWindow) {
-                        copyOutcome = 'copied_opened_no_prefill';
-                    } else {
-                        copyOutcome = 'popup_blocked_copied';
-                    }
-                } catch (error) {
-                    copyOutcome = 'popup_blocked_copied';
-                }
-            }
             handleClipboardFallback(prompt, platform, button, copyOutcome);
             return copyOutcome;
         }
