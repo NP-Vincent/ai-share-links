@@ -3,7 +3,7 @@
  * Plugin Name: AI Share Links
  * Plugin URI: https://github.com/zachte33/ai-share-links
  * Description: Add AI-powered sharing buttons to blog posts for summarization and analysis across Perplexity, ChatGPT, Claude, Gemini, and DeepSeek.
- * Version: 1.1.4
+ * Version: 1.1.5
  * Author: Zach Elkins
  * Author URI: https://zachwp.com
  * License: GPL v2 or later
@@ -20,7 +20,7 @@
 
 defined('ABSPATH') || exit;
 
-define('AI_SHARE_LINKS_VERSION', '1.1.4');
+define('AI_SHARE_LINKS_VERSION', '1.1.5');
 define('AI_SHARE_LINKS_PLUGIN_FILE', __FILE__);
 define('AI_SHARE_LINKS_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('AI_SHARE_LINKS_TEXT_DOMAIN', 'ai-share-links');
