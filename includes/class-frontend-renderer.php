@@ -105,7 +105,7 @@ class AI_Share_Links_Frontend_Renderer {
 
             $fallback_url = $this->build_provider_url($ai, $options['ai_prompt'], $post_url, $site_name, $page_title, $prompt_context);
 
-            $output .= sprintf('<a href="%s" target="_blank" rel="noopener noreferrer" class="ai-share-btn" data-ai="%s" data-template="%s" data-site="%s" data-url="%s" data-title="%s" data-type="%s" data-post-type="%s" data-category="%s" data-tags="%s" data-excerpt="%s" data-base-url="%s" data-param-key="%s" data-supports-prefill="%s"%s>%s<span>%s</span></a>', esc_url($fallback_url), esc_attr($ai['id']), esc_attr($options['ai_prompt']), esc_attr($site_name), esc_attr($post_url), esc_attr($page_title), esc_attr($prompt_context['type']), esc_attr($prompt_context['post_type']), esc_attr($prompt_context['category']), esc_attr($prompt_context['tags']), esc_attr($prompt_context['excerpt']), esc_url($ai['base_url']), esc_attr($ai['param_key']), $ai['supports_prefill'] ? '1' : '0', $onclick, $icon, esc_html($button_text));
+            $output .= sprintf('<a href="%s" target="_blank" rel="noopener noreferrer" class="ai-share-btn" data-ai="%s" data-template="%s" data-site="%s" data-url="%s" data-title="%s" data-type="%s" data-post-type="%s" data-category="%s" data-tags="%s" data-excerpt="%s" data-schema-type="%s" data-author="%s" data-published-date="%s" data-faq-count="%s" data-base-url="%s" data-param-key="%s" data-supports-prefill="%s"%s>%s<span>%s</span></a>', esc_url($fallback_url), esc_attr($ai['id']), esc_attr($options['ai_prompt']), esc_attr($site_name), esc_attr($post_url), esc_attr($page_title), esc_attr($prompt_context['type']), esc_attr($prompt_context['post_type']), esc_attr($prompt_context['category']), esc_attr($prompt_context['tags']), esc_attr($prompt_context['excerpt']), esc_attr($prompt_context['schema_type']), esc_attr($prompt_context['author']), esc_attr($prompt_context['published_date']), esc_attr((string) $prompt_context['faq_count']), esc_url($ai['base_url']), esc_attr($ai['param_key']), $ai['supports_prefill'] ? '1' : '0', $onclick, $icon, esc_html($button_text));
         }
 
         $output .= '</div></div>';
@@ -136,12 +136,16 @@ class AI_Share_Links_Frontend_Renderer {
                 'category' => '',
                 'tags' => '',
                 'excerpt' => '',
+                'schema_type' => '',
+                'author' => '',
+                'published_date' => '',
+                'faq_count' => 0,
             )
         );
 
         $prompt = str_replace(
-            array('{URL}', '{SITE}', '{TITLE}', '{TYPE}', '{POST_TYPE}', '{CATEGORY}', '{TAGS}', '{EXCERPT}'),
-            array($post_url, $site_name, $page_title, $prompt_context['type'], $prompt_context['post_type'], $prompt_context['category'], $prompt_context['tags'], $prompt_context['excerpt']),
+            array('{URL}', '{SITE}', '{TITLE}', '{TYPE}', '{POST_TYPE}', '{CATEGORY}', '{TAGS}', '{EXCERPT}', '{SCHEMA_TYPE}', '{AUTHOR}', '{PUBLISHED_DATE}', '{FAQ_COUNT}'),
+            array($post_url, $site_name, $page_title, $prompt_context['type'], $prompt_context['post_type'], $prompt_context['category'], $prompt_context['tags'], $prompt_context['excerpt'], $prompt_context['schema_type'], $prompt_context['author'], $prompt_context['published_date'], (string) $prompt_context['faq_count']),
             $template
         );
 
@@ -161,6 +165,10 @@ class AI_Share_Links_Frontend_Renderer {
                 'category' => '',
                 'tags' => '',
                 'excerpt' => '',
+                'schema_type' => '',
+                'author' => '',
+                'published_date' => '',
+                'faq_count' => 0,
             );
         }
 
@@ -185,13 +193,112 @@ class AI_Share_Links_Frontend_Renderer {
         }
 
         $raw_excerpt = has_excerpt($post) ? $post->post_excerpt : wp_trim_words(wp_strip_all_tags($post->post_content), 40, '…');
+        $schema_context = $this->resolve_schema_context($post);
 
         return array(
-            'type' => (string) $type_label,
-            'post_type' => (string) $post_type,
-            'category' => implode(', ', array_map('strval', $category_names)),
-            'tags' => implode(', ', array_map('strval', $tag_names)),
-            'excerpt' => (string) $raw_excerpt,
+            'type' => $this->sanitize_prompt_value($type_label, 80),
+            'post_type' => $this->sanitize_prompt_value($post_type, 40),
+            'category' => $this->sanitize_prompt_value(implode(', ', array_map('strval', $category_names)), 200),
+            'tags' => $this->sanitize_prompt_value(implode(', ', array_map('strval', $tag_names)), 200),
+            'excerpt' => $this->sanitize_prompt_value($raw_excerpt, 400),
+            'schema_type' => $schema_context['schema_type'],
+            'author' => $schema_context['author'],
+            'published_date' => $schema_context['published_date'],
+            'faq_count' => (int) $schema_context['faq_count'],
         );
     }
+
+    private function resolve_schema_context($post) {
+        $context = array(
+            'schema_type' => '',
+            'author' => '',
+            'published_date' => '',
+            'faq_count' => 0,
+        );
+
+        if (!$post instanceof WP_Post) {
+            return $context;
+        }
+
+        $schema_candidates = array(
+            get_post_meta($post->ID, '_yoast_wpseo_schema_page_type', true),
+            get_post_meta($post->ID, 'rank_math_rich_snippet', true),
+            get_post_meta($post->ID, '_aioseo_schema_type', true),
+            get_post_meta($post->ID, '_seopress_analysis_target_kw', true),
+        );
+
+        foreach ($schema_candidates as $candidate) {
+            $candidate = $this->sanitize_prompt_value($candidate, 60);
+            if ('' !== $candidate) {
+                $context['schema_type'] = $candidate;
+                break;
+            }
+        }
+
+        if ('' === $context['schema_type']) {
+            $post_type = get_post_type($post);
+            $context['schema_type'] = $this->sanitize_prompt_value($post_type ? $post_type : 'post', 60);
+        }
+
+        $author_name = get_the_author_meta('display_name', (int) $post->post_author);
+        if (empty($author_name)) {
+            $author_name = get_the_author_meta('nickname', (int) $post->post_author);
+        }
+        $context['author'] = $this->sanitize_prompt_value($author_name, 80);
+
+        $publish_timestamp = get_post_time('U', true, $post);
+        if (!empty($publish_timestamp)) {
+            $context['published_date'] = $this->sanitize_prompt_value(gmdate('Y-m-d', (int) $publish_timestamp), 10);
+        }
+
+        $faq_meta_candidates = array(
+            get_post_meta($post->ID, 'rank_math_faq_schema', true),
+            get_post_meta($post->ID, '_aioseo_faq_page', true),
+            get_post_meta($post->ID, '_seopress_pro_rich_snippets_faq', true),
+        );
+
+        foreach ($faq_meta_candidates as $faq_meta) {
+            $faq_count = $this->extract_item_count($faq_meta);
+            if ($faq_count > $context['faq_count']) {
+                $context['faq_count'] = $faq_count;
+            }
+        }
+
+        $content_blob = strtolower((string) $post->post_content);
+        if (false !== strpos($content_blob, 'wp:yoast/faq-block') || false !== strpos($content_blob, 'wp:rank-math/faq-block') || false !== strpos($content_blob, 'wp:aioseo/faq')) {
+            $context['faq_count'] = max($context['faq_count'], 1);
+        }
+
+        return $context;
+    }
+
+    private function extract_item_count($value) {
+        if (is_array($value)) {
+            return count($value);
+        }
+
+        if (is_string($value) && '' !== $value) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                return count($decoded);
+            }
+
+            if (false !== strpos(strtolower($value), 'faq')) {
+                return 1;
+            }
+        }
+
+        return 0;
+    }
+
+    private function sanitize_prompt_value($value, $max_length = 200) {
+        $value = is_scalar($value) ? (string) $value : '';
+        $value = sanitize_text_field(wp_strip_all_tags($value));
+        if (function_exists('mb_substr')) {
+            return mb_substr($value, 0, (int) $max_length);
+        }
+
+        return substr($value, 0, (int) $max_length);
+    }
 }
+
