@@ -77,6 +77,7 @@ class AI_Share_Links_Frontend_Renderer {
         $page_title = get_the_title();
         $site_name = esc_attr(get_bloginfo('name'));
         $provider_map = $this->get_provider_map();
+        $prompt_context = $this->get_prompt_context();
 
         $output = sprintf('<div class="%s" role="complementary" aria-label="%s">', esc_attr('ai-share-container'), esc_attr__('AI sharing options', AI_SHARE_LINKS_TEXT_DOMAIN));
         $output .= sprintf('<h4 class="ai-share-title">%s</h4>', esc_html($options['description']));
@@ -102,9 +103,9 @@ class AI_Share_Links_Frontend_Renderer {
                 ? sprintf(' onclick="if(typeof gtag!==\'undefined\'){gtag(\'event\',\'ai_share_click\',{\'ai_platform\':\'%s\',\'page_url\':window.location.href});}"', esc_js($ai_key))
                 : '';
 
-            $fallback_url = $this->build_provider_url($ai, $options['ai_prompt'], $post_url, $site_name, $page_title);
+            $fallback_url = $this->build_provider_url($ai, $options['ai_prompt'], $post_url, $site_name, $page_title, $prompt_context);
 
-            $output .= sprintf('<a href="%s" target="_blank" rel="noopener noreferrer" class="ai-share-btn" data-ai="%s" data-template="%s" data-site="%s" data-url="%s" data-title="%s" data-base-url="%s" data-param-key="%s" data-supports-prefill="%s"%s>%s<span>%s</span></a>', esc_url($fallback_url), esc_attr($ai['id']), esc_attr($options['ai_prompt']), esc_attr($site_name), esc_attr($post_url), esc_attr($page_title), esc_url($ai['base_url']), esc_attr($ai['param_key']), $ai['supports_prefill'] ? '1' : '0', $onclick, $icon, esc_html($button_text));
+            $output .= sprintf('<a href="%s" target="_blank" rel="noopener noreferrer" class="ai-share-btn" data-ai="%s" data-template="%s" data-site="%s" data-url="%s" data-title="%s" data-type="%s" data-post-type="%s" data-category="%s" data-tags="%s" data-excerpt="%s" data-base-url="%s" data-param-key="%s" data-supports-prefill="%s"%s>%s<span>%s</span></a>', esc_url($fallback_url), esc_attr($ai['id']), esc_attr($options['ai_prompt']), esc_attr($site_name), esc_attr($post_url), esc_attr($page_title), esc_attr($prompt_context['type']), esc_attr($prompt_context['post_type']), esc_attr($prompt_context['category']), esc_attr($prompt_context['tags']), esc_attr($prompt_context['excerpt']), esc_url($ai['base_url']), esc_attr($ai['param_key']), $ai['supports_prefill'] ? '1' : '0', $onclick, $icon, esc_html($button_text));
         }
 
         $output .= '</div></div>';
@@ -122,14 +123,25 @@ class AI_Share_Links_Frontend_Renderer {
         );
     }
 
-    private function build_provider_url($provider, $template, $post_url, $site_name, $page_title) {
+    private function build_provider_url($provider, $template, $post_url, $site_name, $page_title, $prompt_context = array()) {
         if (empty($provider['base_url']) || empty($provider['param_key'])) {
             return $post_url;
         }
 
+        $prompt_context = wp_parse_args(
+            $prompt_context,
+            array(
+                'type' => '',
+                'post_type' => '',
+                'category' => '',
+                'tags' => '',
+                'excerpt' => '',
+            )
+        );
+
         $prompt = str_replace(
-            array('{URL}', '{SITE}', '{TITLE}'),
-            array($post_url, $site_name, $page_title),
+            array('{URL}', '{SITE}', '{TITLE}', '{TYPE}', '{POST_TYPE}', '{CATEGORY}', '{TAGS}', '{EXCERPT}'),
+            array($post_url, $site_name, $page_title, $prompt_context['type'], $prompt_context['post_type'], $prompt_context['category'], $prompt_context['tags'], $prompt_context['excerpt']),
             $template
         );
 
@@ -137,6 +149,49 @@ class AI_Share_Links_Frontend_Renderer {
             $provider['param_key'],
             $prompt,
             $provider['base_url']
+        );
+    }
+
+    private function get_prompt_context() {
+        $post = get_post();
+        if (!$post instanceof WP_Post) {
+            return array(
+                'type' => '',
+                'post_type' => '',
+                'category' => '',
+                'tags' => '',
+                'excerpt' => '',
+            );
+        }
+
+        $post_type = get_post_type($post);
+        $post_type_object = get_post_type_object($post_type);
+        $type_label = ($post_type_object && !empty($post_type_object->labels->singular_name)) ? $post_type_object->labels->singular_name : $post_type;
+
+        $category_names = array();
+        if (is_object_in_taxonomy($post_type, 'category')) {
+            $categories = get_the_terms($post, 'category');
+            if (!is_wp_error($categories) && !empty($categories)) {
+                $category_names = wp_list_pluck($categories, 'name');
+            }
+        }
+
+        $tag_names = array();
+        if (is_object_in_taxonomy($post_type, 'post_tag')) {
+            $tags = get_the_terms($post, 'post_tag');
+            if (!is_wp_error($tags) && !empty($tags)) {
+                $tag_names = wp_list_pluck($tags, 'name');
+            }
+        }
+
+        $raw_excerpt = has_excerpt($post) ? $post->post_excerpt : wp_trim_words(wp_strip_all_tags($post->post_content), 40, '…');
+
+        return array(
+            'type' => (string) $type_label,
+            'post_type' => (string) $post_type,
+            'category' => implode(', ', array_map('strval', $category_names)),
+            'tags' => implode(', ', array_map('strval', $tag_names)),
+            'excerpt' => (string) $raw_excerpt,
         );
     }
 }
