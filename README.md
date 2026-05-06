@@ -24,6 +24,8 @@ AI Share Links helps readers open your content in popular AI tools with one clic
 ### Prompting & Analytics
 - **Prompt Tokens**: Use `{URL}`, `{SITE}`, `{TITLE}`, `{TYPE}`, `{POST_TYPE}`, `{CATEGORY}`, `{TAGS}`, `{EXCERPT}`, `{SCHEMA_TYPE}`, `{AUTHOR}`, `{PUBLISHED_DATE}`, and `{FAQ_COUNT}`
 - **Runtime Prompt Generation**: Prompt values are generated at click time while keeping href fallback behavior; empty tokens resolve to blank values
+- **Provider Mode Routing**: Each provider has a recommended mode (`prefill`, `copy_only`, `auto`) based on prefill capability and reliability
+- **Inline Fallback Messaging**: Explicit inline messages explain when prompts are copied versus prefilled
 - **Google Analytics Integration**: Optional click tracking
 
 ## Installation
@@ -83,6 +85,16 @@ resources/guides/getting-started
 
 Enable Compatibility Mode if your theme prepends featured images **after** `the_content` filters and causes the share bar to overlap content. The plugin will move the share bar to the top via JavaScript.
 
+## Provider Modes
+
+Provider behavior is driven by a single provider configuration map used by both frontend JavaScript and admin settings:
+
+- **Perplexity**: `prefill` (stable prefill support)
+- **ChatGPT**: `auto` (prefill attempted when reliable; copy fallback messaging)
+- **Claude**: `auto` (prefill attempted when reliable; copy fallback messaging)
+- **Gemini**: `auto` (prefill attempted when reliable; copy fallback messaging)
+- **DeepSeek**: `copy_only` (prompt is copied for manual paste)
+
 ## Supported AI Platforms
 
 1. **Perplexity**
@@ -97,6 +109,11 @@ Enable Compatibility Mode if your theme prepends featured images **after** `the_
 - PHP 7.4+
 
 ## Version History
+
+### Version 1.1.5
+- Extended provider config with capability metadata (`supports_prefill`, `prefill_stability`, `recommended_mode`)
+- Added click-mode selector to prefer stable prefill and use copy-only fallback with explicit inline status messaging
+- Added admin-visible provider mode descriptions in settings
 
 ### Version 1.1.4
 - Introduced theme-inherited styling model for cleaner integration with active themes

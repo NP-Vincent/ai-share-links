@@ -30,7 +30,7 @@
         return config.base_url + '?' + encodeURIComponent(config.param_key) + '=' + encodeURIComponent(prompt);
     }
 
-    var STATUS_MESSAGES = { copied_and_opened: { message: 'Prompt copied — paste and customize in chat', isError: false }, copied_only: { message: 'Prompt copied — provider does not support prefill', isError: false }, popup_blocked_copied: { message: 'Popup blocked — prompt copied. Allow popups for this site to open provider automatically.', isError: false }, copy_failed: { message: 'Unable to copy automatically — copy the prompt manually and paste into chat.', isError: true } };
+    var STATUS_MESSAGES = { copied_and_opened: { message: 'Opened with prefilled prompt.', isError: false }, copied_only: { message: 'Copied prompt — paste it in chat to continue.', isError: false }, popup_blocked_copied: { message: 'Popup blocked — prompt copied. Allow popups to open provider automatically.', isError: false }, prefill_unstable_copied: { message: 'Prefill is not reliable for this provider right now — prompt copied for manual paste.', isError: false }, copy_failed: { message: 'Unable to copy automatically — copy the prompt manually and paste into chat.', isError: true } };
     function setInlineStatus(button, message, isError) { if (!button) return; var statusEl = button.querySelector('.ai-share-inline-status'); if (!statusEl) { statusEl = document.createElement('span'); statusEl.className = 'ai-share-inline-status'; statusEl.setAttribute('aria-live', 'polite'); statusEl.style.display = 'block'; statusEl.style.fontSize = '12px'; statusEl.style.marginTop = '4px'; button.appendChild(statusEl);} statusEl.textContent = message; statusEl.style.color = isError ? '#b91c1c' : 'inherit'; window.setTimeout(function () { if (statusEl && statusEl.parentNode === button) { statusEl.textContent = ''; } }, 3000); }
     function showInlineStatus(button, outcome) { var details = STATUS_MESSAGES[outcome] || STATUS_MESSAGES.copy_failed; setInlineStatus(button, details.message, details.isError); }
     function emitAnalytics(eventName, payload) { if (!CONFIG.gaTracking || typeof gtag === 'undefined') return; gtag('event', eventName, payload); }
@@ -41,11 +41,31 @@
     function handleThrottle(button, promptFingerprint) { var currentTime = Date.now(); var lastClickKey = 'ai_share_last_click_' + promptFingerprint; var lastClickTime = localStorage.getItem(lastClickKey); if (!lastClickTime || (currentTime - parseInt(lastClickTime, 10)) >= 30000) { localStorage.setItem(lastClickKey, currentTime.toString()); return false; } var remainingTime = getRemainingThrottleSeconds(lastClickTime); var originalText = button.querySelector('span:last-child').textContent; button.style.opacity = '0.5'; button.style.pointerEvents = 'none'; button.style.cursor = 'not-allowed'; button.querySelector('span:last-child').textContent = 'Wait ' + remainingTime + 's'; var countdown = setInterval(function () { var newRemainingTime = getRemainingThrottleSeconds(lastClickTime); if (newRemainingTime <= 0) { clearInterval(countdown); button.style.opacity = '1'; button.style.pointerEvents = 'auto'; button.style.cursor = 'pointer'; button.querySelector('span:last-child').textContent = originalText; return; } button.querySelector('span:last-child').textContent = 'Wait ' + newRemainingTime + 's'; }, 1000); return true; }
     function getPromptContext(button) { return { template: button.dataset.template || '', platform: button.dataset.ai, title: button.dataset.title || document.title || '', site: button.dataset.site || window.location.hostname || '', url: button.dataset.url || getCanonicalUrl(), type: button.dataset.type || '', postType: button.dataset.postType || '', category: button.dataset.category || '', tags: button.dataset.tags || '', excerpt: button.dataset.excerpt || '' }; }
 
+    function resolveProviderMode(provider) {
+        var recommendedMode = provider.recommended_mode || 'auto';
+        if (recommendedMode === 'prefill' || recommendedMode === 'copy_only') {
+            return recommendedMode;
+        }
+
+        if (!provider.supports_prefill) {
+            return 'copy_only';
+        }
+
+        if (provider.prefill_stability === 'stable') {
+            return 'prefill';
+        }
+
+        return 'copy_only';
+    }
+
     function openProviderOrFallback(platform, prompt, button) {
         var provider = PROVIDERS[platform] || {};
-        if (!provider.supports_prefill) {
-            handleClipboardFallback(prompt, platform, button, 'copied_only');
-            return 'copied_only';
+        var selectedMode = resolveProviderMode(provider);
+
+        if (selectedMode === 'copy_only') {
+            var copyOutcome = provider.supports_prefill ? 'prefill_unstable_copied' : 'copied_only';
+            handleClipboardFallback(prompt, platform, button, copyOutcome);
+            return copyOutcome;
         }
 
         var runtimeUrl = buildProviderUrl(platform, prompt);
